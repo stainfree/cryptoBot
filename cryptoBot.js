@@ -17,19 +17,25 @@ var MIKE_TOKEN = 'ujt68kne2nc2ye6wav5pund5v61fuz' //Pushover user Key
 *********** GDAX FUNCTIONS *************
 ***************************************/
 
-var getGdaxOptions = function(page) {
+var getGdaxOptions = function(prod, page) {
+    if (!prod) {
+        console.error('invalid product');
+        return null;
+    }
+
     page = page || 0;
     //GET Request options
     var gdaxOptions = {
         host: 'api.gdax.com',
         port: 443,
-        path: '/products/ETH-USD/trades' + (page ? ('?after=' + page) : ''),
+        path: '/products/' + prod + '/trades' + (page ? ('?after=' + page) : ''),
         method: 'GET',
         headers: {
             'Content-Type': 'application/json',
             'User-Agent': 'R'
         }
     };
+    console.log(gdaxOptions.path);
     return gdaxOptions;
 };
 
@@ -69,27 +75,35 @@ var chainGdaxPageRequests = function (tracker) {
     if (tracker.page === 'eof') {
         //Termination code 
         if ((tracker.cumulative.sell || 0) + (tracker.cumulative.buy || 0) >= VOLUME_THRESHOLD) {
-            var message = constructPushoverMsg('GDAX', 'ETH-USD', tracker);
+            var message = constructPushoverMsg('GDAX', tracker);
             sendPushover(message);
         }
-        // console.log('GDAX ETH-USD sell volume: %s', tracker.cumulative.sell || 0);
-        // console.log('GDAX ETH-USD buy volume: %s', tracker.cumulative.buy || 0);
+        console.log('GDAX %s sell volume: %s', tracker.product, tracker.cumulative.sell || 0);
+        console.log('GDAX %s buy volume: %s', tracker.product, tracker.cumulative.buy || 0);
     } else {
-        makeRequest(getGdaxOptions(tracker.page), function(result) {
+        makeRequest(getGdaxOptions(tracker.product, tracker.page), function(result) {
             gdaxPageCallback(result, tracker);
             chainGdaxPageRequests(tracker);
         });
     }
 }
 
-//MAIN GDAX FN
-var queryGdax = function() {
-    var tracker = {
+var newTracker = function(prod) {
+    return {
         firstDate: null,
         cumulative: {},
-        page: 0
+        page: 0,
+        product: prod
     };
-    chainGdaxPageRequests(tracker);
+};
+
+//MAIN GDAX FN
+var queryGdax = function() {
+    // var usdTracker = newTracker('ETH-USD');
+    // chainGdaxPageRequests(usdTracker);
+
+    var btcTracker = newTracker('ETH-BTC');
+    chainGdaxPageRequests(btcTracker);
 }
 
 /****************************************
@@ -129,10 +143,10 @@ var sendPushover = function(message) {
     });
 };
 
-var constructPushoverMsg = function(exch, product, tracker) {
+var constructPushoverMsg = function(exch, tracker) {
     var message = 'Volume exceeded threshold: ' + VOLUME_THRESHOLD;
     message += '\nExchange: ' + exch;
-    message += '\nProduct: ' + product;
+    message += '\nProduct: ' + tracker.product;
     message += '\n>>>>>>>>>>>>>>>';
     message += '\nsell volume: ' + (tracker.cumulative.sell || 0);
     message += '\nbuy volume: ' + (tracker.cumulative.buy || 0); 

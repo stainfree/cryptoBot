@@ -8,8 +8,9 @@ var querystring = require('querystring');
 /****************************************
 ************* CONSTANTS *************
 ***************************************/
+var DEBUG = true;
 var TIME_FRAME = 60000*5; //60000*x = x minutes
-var VOLUME_THRESHOLD = 10;
+var VOLUME_THRESHOLD = 500;
 var DUMPALERT_TOKEN = 'aiaymynvmwaxovky5z7uagciqv2opj' //Pushover app token
 var MIKE_TOKEN = 'ujt68kne2nc2ye6wav5pund5v61fuz' //Pushover user Key
 
@@ -35,12 +36,11 @@ var getGdaxOptions = function(prod, page) {
             'User-Agent': 'R'
         }
     };
-    console.log(gdaxOptions.path);
     return gdaxOptions;
 };
 
-var logGdaxTrade = function(trade) {
- console.log('Type: %s, Price: %s, Size: %s, Time: %s', trade.side, trade.price, trade.size, trade.time);
+var logGdaxTrade = function(trade, tracker) {
+ tracker.log('Type: %s, Price: %s, Size: %s, Time: %s', trade.side, trade.price, trade.size, trade.time);
 };
 
 /**
@@ -50,7 +50,6 @@ var logGdaxTrade = function(trade) {
  * @param tracker: {} pre-initialized object containing attributes: firstDate, cumulative, page
  */
 var gdaxPageCallback = function(result, tracker) {
-    // console.log('Status Code: %s', statusCode);
     tracker.cumulative = tracker.cumulative || {};
     tracker.firstDate = tracker.firstDate || result[0].time;
 
@@ -58,12 +57,12 @@ var gdaxPageCallback = function(result, tracker) {
     for (var i = 0; i < result.length; i++) {
         var trade = result[i];
         if (new Date(tracker.firstDate) - new Date(trade.time) > TIME_FRAME) {
-            console.log('Exceeded interval: %s', TIME_FRAME);
+            tracker.log('Exceeded interval: %s', TIME_FRAME);
             tracker.page = 'eof';
             return;
         }
 
-        logGdaxTrade(trade);
+        logGdaxTrade(trade, tracker);
         tracker.cumulative[trade.side] = tracker.cumulative[trade.side] || 0;
         tracker.cumulative[trade.side] += parseFloat(trade.size);
     }
@@ -71,15 +70,16 @@ var gdaxPageCallback = function(result, tracker) {
 }
 
 var chainGdaxPageRequests = function (tracker) {
-    console.log('Tracker Page: %s', tracker.page);
+    tracker.log('Tracker Page: %s', tracker.page);
     if (tracker.page === 'eof') {
         //Termination code 
         if ((tracker.cumulative.sell || 0) + (tracker.cumulative.buy || 0) >= VOLUME_THRESHOLD) {
             var message = constructPushoverMsg('GDAX', tracker);
             sendPushover(message);
         }
-        console.log('GDAX %s sell volume: %s', tracker.product, tracker.cumulative.sell || 0);
-        console.log('GDAX %s buy volume: %s', tracker.product, tracker.cumulative.buy || 0);
+        tracker.log('GDAX %s sell volume: %s', tracker.product, tracker.cumulative.sell || 0);
+        tracker.log('GDAX %s buy volume: %s', tracker.product, tracker.cumulative.buy || 0);
+        tracker.output();
     } else {
         makeRequest(getGdaxOptions(tracker.product, tracker.page), function(result) {
             gdaxPageCallback(result, tracker);
@@ -89,18 +89,36 @@ var chainGdaxPageRequests = function (tracker) {
 }
 
 var newTracker = function(prod) {
+    var logArr = [];
+
+    var queueLog = function() {
+        logArr.push(Array.prototype.slice.call(arguments));
+    };
+
+    var outputLog = function() {
+        if (!DEBUG) {
+            return;
+        }
+
+        logArr.forEach(function(args) {
+            console.log.apply(this, args);
+        });
+    };
+
     return {
         firstDate: null,
         cumulative: {},
         page: 0,
-        product: prod
+        product: prod,
+        log: queueLog,
+        output: outputLog
     };
 };
 
 //MAIN GDAX FN
 var queryGdax = function() {
-    // var usdTracker = newTracker('ETH-USD');
-    // chainGdaxPageRequests(usdTracker);
+    var usdTracker = newTracker('ETH-USD');
+    chainGdaxPageRequests(usdTracker);
 
     var btcTracker = newTracker('ETH-BTC');
     chainGdaxPageRequests(btcTracker);
@@ -139,7 +157,7 @@ var constructPushoverPayload = function(message) {
 var sendPushover = function(message) {
     var payload = constructPushoverPayload(message);
     makeRequest(getPushoverOptions(payload), function(res) {
-        console.log(res);
+        // console.log(res);
     });
 };
 
@@ -165,7 +183,7 @@ var makeRequest = function(options, resCallback) {
     var req = prot.request(options, function(res)
     {
         var output = '';
-        console.log(options.host + ':' + res.statusCode);
+        // console.log(options.host + ':' + res.statusCode);
         res.setEncoding('utf8');
 
         res.on('data', function (chunk) {

@@ -92,7 +92,7 @@ var newTracker = function(prod) {
     var logArr = [];
 
     var queueLog = function() {
-        logArr.push(Array.prototype.slice.call(arguments));
+        logArr.push(arguments);
     };
 
     var outputLog = function() {

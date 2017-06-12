@@ -1,18 +1,18 @@
 /****************************************
 *********** DEPENDENCIES *************
 ***************************************/
-var http = require("http");
-var https = require("https");
+var http = require('http');
+var https = require('https');
 var querystring = require('querystring');
 
 /****************************************
-************* CONSTANTS *************
+************* CONSTANTS *************F
 ***************************************/
 var DEBUG = true;
 var TIME_FRAME = 60000*5; //60000*x = x minutes
 var VOLUME_THRESHOLD = 500;
-var DUMPALERT_TOKEN = 'aiaymynvmwaxovky5z7uagciqv2opj' //Pushover app token
-var MIKE_TOKEN = 'ujt68kne2nc2ye6wav5pund5v61fuz' //Pushover user Key
+var DUMPALERT_TOKEN = 'aiaymynvmwaxovky5z7uagciqv2opj'; //Pushover app token
+var MIKE_TOKEN = 'ujt68kne2nc2ye6wav5pund5v61fuz'; //Pushover user Key
 
 /****************************************
 *********** GDAX FUNCTIONS *************
@@ -40,11 +40,11 @@ var getGdaxOptions = function(prod, page) {
 };
 
 var logGdaxTrade = function(trade, tracker) {
- tracker.log('Type: %s, Price: %s, Size: %s, Time: %s', trade.side, trade.price, trade.size, trade.time);
+    tracker.log('Type: %s, Price: %s, Size: %s, Time: %s', trade.side, trade.price, trade.size, trade.time);
 };
 
 /**
- * gdaxPageCallback: callback for a single paged request from GDAX, 
+ * gdaxPageCallback: callback for a single paged request from GDAX,
  * sets tracker.page = null when finished parsing
  * @param result: JSON result array from gdax
  * @param tracker: {} pre-initialized object containing attributes: firstDate, cumulative, page
@@ -67,12 +67,12 @@ var gdaxPageCallback = function(result, tracker) {
         tracker.cumulative[trade.side] += parseFloat(trade.size);
     }
     tracker.page += 1;
-}
+};
 
 var chainGdaxPageRequests = function (tracker) {
     tracker.log('Tracker Page: %s', tracker.page);
     if (tracker.page === 'eof') {
-        //Termination code 
+        //Termination code
         if ((tracker.cumulative.sell || 0) + (tracker.cumulative.buy || 0) >= VOLUME_THRESHOLD) {
             var message = constructPushoverMsg('GDAX', tracker);
             sendPushover(message);
@@ -86,7 +86,7 @@ var chainGdaxPageRequests = function (tracker) {
             chainGdaxPageRequests(tracker);
         });
     }
-}
+};
 
 var newTracker = function(prod) {
     var logArr = [];
@@ -122,7 +122,7 @@ var queryGdax = function() {
 
     var btcTracker = newTracker('ETH-BTC');
     chainGdaxPageRequests(btcTracker);
-}
+};
 
 /****************************************
 ************** FUNCTIONS *************
@@ -148,11 +148,11 @@ var constructPushoverPayload = function(message) {
         token: DUMPALERT_TOKEN,
         user: MIKE_TOKEN,
         message: message,
-        title: "Dump (or pump) Alert!",
+        title: 'Dump (or pump) Alert!',
         priority: 1
     };
     return querystring.stringify(payload);
-}
+};
 
 var sendPushover = function(message) {
     var payload = constructPushoverPayload(message);
@@ -161,13 +161,19 @@ var sendPushover = function(message) {
     });
 };
 
+/**
+ * [description]
+ * @param  {[type]} exch    [description]
+ * @param  {[type]} tracker [description]
+ * @return {[type]}         [description]
+ */
 var constructPushoverMsg = function(exch, tracker) {
     var message = 'Volume exceeded threshold: ' + VOLUME_THRESHOLD;
     message += '\nExchange: ' + exch;
     message += '\nProduct: ' + tracker.product;
     message += '\n>>>>>>>>>>>>>>>';
     message += '\nsell volume: ' + (tracker.cumulative.sell || 0);
-    message += '\nbuy volume: ' + (tracker.cumulative.buy || 0); 
+    message += '\nbuy volume: ' + (tracker.cumulative.buy || 0);
     return message;
 };
 
@@ -177,11 +183,10 @@ var constructPushoverMsg = function(exch, tracker) {
  * @param callback: callback to pass the results JSON object(s) back
  */
 var makeRequest = function(options, resCallback) {
-    // console.log("start request");
+    // console.log('start request');
 
     var prot = options.port === 443 ? https : http;
-    var req = prot.request(options, function(res)
-    {
+    var req = prot.request(options, function(res){
         var output = '';
         // console.log(options.host + ':' + res.statusCode);
         res.setEncoding('utf8');
@@ -199,7 +204,7 @@ var makeRequest = function(options, resCallback) {
     });
 
     req.on('error', function(err) {
-        res.send('error: ' + err.message);
+        req.send('error: ' + err.message);
     });
 
     if (options.method === 'POST' && options.payload) {

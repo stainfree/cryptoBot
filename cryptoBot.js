@@ -217,6 +217,5 @@ var makeRequest = function(options, resCallback) {
 /****************************************
 ***************  MAIN  ***************
 ***************************************/
-
 queryGdax();
-// sendPushover('Hello');
+setInterval(queryGdax, TIME_FRAME);

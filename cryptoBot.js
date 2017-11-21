@@ -4,6 +4,7 @@
 var gdax = require('gdax');
 var kraken = require('kraken-api');
 var pushover = require('pushover-notifications');
+var $q = require('q');
 
 /****************************************
 ************* CONSTANTS *************
@@ -69,9 +70,13 @@ Trade.prototype.getPair = function() {
 *************** FUNCTIONS ***************
 ***************************************/
 
-var getGdaxTradeBlock = function(tradesFrom, tradesTo) {
-
-}
+var getGdaxTradeBlock = function(client, tradesFrom, tradesTo) {
+  var q = $q.defer();
+  client.getProductTrades(function(result) {
+    q.resolve(result);
+  });
+  return q.promise;
+};
 
 /****************************************
 ****************** MAIN ****************
@@ -80,3 +85,11 @@ var getGdaxTradeBlock = function(tradesFrom, tradesTo) {
 var defaultInfo = {};
 var setDefault = function(prop, val) {
 };
+
+//Init and test
+var gdaxClient = new gdax.PublicClient();
+var currentTime = new Date().getTime() / 1000;
+var trades;
+getGdaxTradeBlock(gdaxClient, currentTime - 600, currentTime).then(function(data) {
+  trades = data;
+});

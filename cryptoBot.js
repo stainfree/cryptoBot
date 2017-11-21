@@ -2,7 +2,7 @@
 *********** DEPENDENCIES *************
 ***************************************/
 var gdax = require('gdax');
-var kraken = require('kraken-api');
+// var kraken = require('kraken-api');
 var pushover = require('pushover-notifications');
 var $q = require('q');
 
@@ -72,7 +72,7 @@ Trade.prototype.getPair = function() {
 
 var getGdaxTradeBlock = function(client, tradesFrom, tradesTo) {
   var q = $q.defer();
-  client.getProductTrades(function(result) {
+  client.getProductTrades(function(error, result) {
     q.resolve(result);
   });
   return q.promise;

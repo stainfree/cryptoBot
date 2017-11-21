@@ -2,7 +2,7 @@
 *********** DEPENDENCIES *************
 ***************************************/
 var gdax = require('gdax');
-// var kraken = require('kraken-api');
+// var kraken = require('kraken-api'); TODO throwing errors when requiring...
 var pushover = require('pushover-notifications');
 var $q = require('q');
 

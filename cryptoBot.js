@@ -66,9 +66,26 @@ Trade.prototype.getPair = function() {
   return this.base + '/' + this.counter;
 };
 
+var GdaxTradeBlock = function(tradesFrom, tradesTo) {
+  this.prototype = new Tradeblock(tradesFrom, tradesTo);
+};
+
+GdaxTradeBlock.prototype.parsePage = function(trades) {
+
+};
+
+GdaxTradeBlock.prototype.populateTrades = function(client) {
+  var q = $q.defer();
+  client.getProductTrades(function(error, result) {
+    q.resolve(result);
+  });
+};
+
 /****************************************
 *************** FUNCTIONS ***************
 ***************************************/
+
+parse
 
 var getGdaxTradeBlock = function(client, tradesFrom, tradesTo) {
   var q = $q.defer();

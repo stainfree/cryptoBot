@@ -108,7 +108,7 @@ var GdaxTradeBlock = function(tradesFrom, tradesTo) {
   //only client is needed as an argument, other 2 are for recursion
   tradeBlock.populateTrades = function(client, params, recursiveQ) {
     var _this = this;
-    var q = $q.defer() || recursiveQ;
+    var q = recursiveQ || $q.defer();
     var callParams = params || {};
     client.getProductTrades(callParams, function(error, result) {
       var parseRes = _this.parseTrades(result);

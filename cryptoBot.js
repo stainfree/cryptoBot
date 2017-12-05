@@ -98,15 +98,18 @@ GdaxTradeBlock.prototype.parseTrades = function(data) {
   });
 };
 
-//recursivePromise is not meant to be used as an arg
-//TODO(continue here)
-GdaxTradeBlock.prototype.populateTrades = function(client, recursiveQ) {
-  var q = recursiveQ || $q.defer();
-  client.getProductTrades(function(error, result) {
+//only client is needed as an argument, other 2 are for recursion
+GdaxTradeBlock.prototype.populateTrades = function(client, params, recursiveQ) {
+  var q = $q.defer() || recursiveQ;
+  var callParams = params || {};
+  client.getProductTrades(callParams, function(error, result) {
     var parseRes = this.parseTrades(result);
-    if (parseRes.latest < )
-    this.populateTrades
-    q.resolve(result);
+    if (parseRes.latest < this.tradesTo) {
+      callParams.after = result.headers['cb-after'];
+      this.populateTrades(client, callParams, q);
+    } else {
+      q.resolve(result);
+    }
   });
   return q.promise;
 };
@@ -115,13 +118,6 @@ GdaxTradeBlock.prototype.populateTrades = function(client, recursiveQ) {
 *************** FUNCTIONS ***************
 ***************************************/
 
-var getGdaxTradeBlock = function(client, tradesFrom, tradesTo) {
-  var q = $q.defer();
-  client.getProductTrades(function(error, result) {
-    q.resolve(result);
-  });
-  return q.promise;
-};
 
 /****************************************
 ****************** MAIN ****************
@@ -131,6 +127,6 @@ var getGdaxTradeBlock = function(client, tradesFrom, tradesTo) {
 var gdaxClient = new gdax.PublicClient();
 var currentTime = new Date().getTime() / 1000;
 var tradeBlock = new GdaxTradeBlock(currentTime - 600, currentTime);
-getGdaxTradeBlock(gdaxClient, currentTime - 600, currentTime).then(function(data) {
-  tradeBlock.parseInPage(data);
+tradeBlock.populateTrades(gdaxClient).then(function() {
+  console.log('done');
 });

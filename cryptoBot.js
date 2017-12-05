@@ -79,15 +79,16 @@ var GdaxTradeBlock = function(tradesFrom, tradesTo) {
 
   //data is passed in from client.getProductTrades
   tradeBlock.parseTrades = function(data) {
-    if (!data || !data.body) {
-      return null;
-    }
     var _this = this;
     var result = {
       earliest: null,
       latest: null
     };
     var tradeArr = JSON.parse(data.body);
+    if (!data || !data.body || !data) {
+      console.error('Expected JSON array as body');
+      return null;
+    }
     tradeArr.forEach(function(trade) {
       var tradeTimeObj = new Date(trade.time);
       if (!result.earliest || tradeTimeObj < result.earliest) {

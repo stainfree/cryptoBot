@@ -1,4 +1,4 @@
-/****************************************
+TradeBlock/****************************************
 *********** DEPENDENCIES *************
 ***************************************/
 var gdax = require('gdax');
@@ -41,8 +41,8 @@ var Orderbook = function(pair) {
 //Generic class for holding info about a single trade
 var Trade = function(tradeInfo) {
   this.side = tradeInfo.side;
-  this.base = tradeInfo.base || defaultInfo.base;
-  this.counter = tradeInfo.counter || defaultInfo.counter;
+  this.base = tradeInfo.base || DEFAULT_INFO.base;
+  this.counter = tradeInfo.counter || DEFAULT_INFO.counter;
   this.price = tradeInfo.price;
   this.size = tradeInfo.size;
 };
@@ -57,7 +57,7 @@ Trade.prototype.getPair = function() {
 
 //Class for holding aggregate trades in a given time frame
 //base and counter are optional
-var Tradeblock = function(tradesFrom, tradesTo, base, counter) {
+var TradeBlock = function(tradesFrom, tradesTo, base, counter) {
   this.tradesFrom = tradesFrom;
   this.tradesTo = tradesTo;
   this.base = base || DEFAULT_INFO.base;
@@ -71,47 +71,50 @@ var Tradeblock = function(tradesFrom, tradesTo, base, counter) {
 };
 
 var GdaxTradeBlock = function(tradesFrom, tradesTo) {
-  this.prototype = new Tradeblock(tradesFrom, tradesTo);
-};
+  var tradeBlock = new TradeBlock(tradesFrom, tradesTo);
 
-//data is from getProductTrades
-//Parses in data.body
-GdaxTradeBlock.prototype.parseTrades = function(data) {
-  var result = {
-    earliest: null,
-    latest: null
+  //data is passed in from client.getProductTrades
+  tradeBlock.parseTrades = function(data) {
+    var _this = this;
+    var result = {
+      earliest: null,
+      latest: null
+    };
+    var tradeArr = JSON.parse(data.body);
+    tradeArr.forEach(function(trade) {
+      var tradeTimeObj = new Date(trade.time);
+      if (!result.earliest || tradeTimeObj < result.earliest) {
+        result.earliest = tradeTimeObj;
+      }
+      if (!result.latest || tradeTimeObj > result.latest) {
+        result.latest = tradeTimeObj;
+      }
+      if(tradeTimeObj <= _this.tradesTo && tradeTimeObj >= _this.tradesFrom) {
+        trade.base = _this.base;
+        trade.counter = _this.counter;
+        _this.addTrade(new Trade(trade));
+      }
+    });
+    return result;
   };
-  var tradeArr = JSON.parse(data.body);
-  tradeArr.forEach(function(trade) {
-    var tradeTimeObj = new Date(trade.time);
-    if (!result.earliest || tradeTimeObj < result.earliest) {
-      result.earliest = tradeTimeObj;
-    }
-    if (!result.latest || tradeTimeObj > result.latest) {
-      result.latest = tradeTimeObj;
-    }
-    if(tradeTimeObj <= this.tradesTo && tradeTimeObj >= this.tradesFrom) {
-      trade.base = this.base;
-      trade.counter = this.counter;
-      this.addTrade(new Trade(trade));
-    }
-  });
-};
 
-//only client is needed as an argument, other 2 are for recursion
-GdaxTradeBlock.prototype.populateTrades = function(client, params, recursiveQ) {
-  var q = $q.defer() || recursiveQ;
-  var callParams = params || {};
-  client.getProductTrades(callParams, function(error, result) {
-    var parseRes = this.parseTrades(result);
-    if (parseRes.latest < this.tradesTo) {
-      callParams.after = result.headers['cb-after'];
-      this.populateTrades(client, callParams, q);
-    } else {
-      q.resolve(result);
-    }
-  });
-  return q.promise;
+  //only client is needed as an argument, other 2 are for recursion
+  tradeBlock.populateTrades = function(client, params, recursiveQ) {
+    var _this = this;
+    var q = $q.defer() || recursiveQ;
+    var callParams = params || {};
+    client.getProductTrades(callParams, function(error, result) {
+      var parseRes = _this.parseTrades(result);
+      if (parseRes.latest < _this.tradesTo) {
+        callParams.after = result.headers['cb-after'];
+        _this.populateTrades(client, callParams, q);
+      } else {
+        q.resolve(result);
+      }
+    });
+    return q.promise;
+  };
+  return tradeBlock;
 };
 
 /****************************************

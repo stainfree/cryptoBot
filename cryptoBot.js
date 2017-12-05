@@ -68,6 +68,10 @@ var TradeBlock = function(tradesFrom, tradesTo, base, counter) {
     //TODO add trade validation
     trades.push(trade);
   };
+
+  this.getTrades = function() {
+    return trades;
+  };
 };
 
 var GdaxTradeBlock = function(tradesFrom, tradesTo) {
@@ -75,6 +79,9 @@ var GdaxTradeBlock = function(tradesFrom, tradesTo) {
 
   //data is passed in from client.getProductTrades
   tradeBlock.parseTrades = function(data) {
+    if (!data || !data.body) {
+      return null;
+    }
     var _this = this;
     var result = {
       earliest: null,
@@ -105,11 +112,11 @@ var GdaxTradeBlock = function(tradesFrom, tradesTo) {
     var callParams = params || {};
     client.getProductTrades(callParams, function(error, result) {
       var parseRes = _this.parseTrades(result);
-      if (parseRes.latest < _this.tradesTo) {
+      if (!parseRes || parseRes.earliest <= _this.tradesFrom) {
+        q.resolve();
+      } else {
         callParams.after = result.headers['cb-after'];
         _this.populateTrades(client, callParams, q);
-      } else {
-        q.resolve(result);
       }
     });
     return q.promise;
@@ -128,8 +135,8 @@ var GdaxTradeBlock = function(tradesFrom, tradesTo) {
 
 //Init and test
 var gdaxClient = new gdax.PublicClient();
-var currentTime = new Date().getTime() / 1000;
-var tradeBlock = new GdaxTradeBlock(currentTime - 600, currentTime);
+var currentTime = new Date().getTime();
+var tradeBlock = new GdaxTradeBlock(currentTime - 300000, currentTime);
 tradeBlock.populateTrades(gdaxClient).then(function() {
   console.log('done');
 });

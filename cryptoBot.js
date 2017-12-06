@@ -137,7 +137,8 @@ var GdaxTradeBlock = function(tradesFrom, tradesTo) {
 //Init and test
 var gdaxClient = new gdax.PublicClient();
 var currentTime = new Date().getTime();
-var tradeBlock = new GdaxTradeBlock(currentTime - 300000, currentTime);
+var tradeBlock = new GdaxTradeBlock(currentTime - 60000, currentTime);
 tradeBlock.populateTrades(gdaxClient).then(function() {
+  var trades = tradeBlock.getTrades();
   console.log('done');
 });
